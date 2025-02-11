@@ -79,21 +79,22 @@ const Header = () => {
           </div>
 
           {/* Search and Actions */}
-        </div>
 
-        <div className="flex items-center space-x-4">
-          <Link to="/whishlist" className="hover:bg-gray-100 p-2 rounded-md">
-            <Heart className="w-5 h-5 text-gray-700" />
-          </Link>
-          <Link to="/cart" className="hover:bg-gray-100 p-2 rounded-md">
-            <ShoppingCart className="w-5 h-5 text-gray-700" />
-          </Link>
-          <div
-            className="flex items-center gap-1 hover:bg-gray-100 rounded-md p-2 cursor-pointer"
-            onClick={() => setIsLoginModalOpen(true)}
-          >
-            <i className="fas fa-user-circle text-gray-700 w-5"></i>
-            <span>Login</span>
+
+          <div className="flex items-center space-x-4">
+            <Link to="/whishlist" className="hover:bg-gray-100 p-2 rounded-md">
+              <Heart className="w-5 h-5 text-gray-700" />
+            </Link>
+            <Link to="/cart" className="hover:bg-gray-100 p-2 rounded-md">
+              <ShoppingCart className="w-5 h-5 text-gray-700" />
+            </Link>
+            <div
+              className="flex items-center gap-1 hover:bg-gray-100 rounded-md p-2 cursor-pointer"
+              onClick={() => setIsLoginModalOpen(true)}
+            >
+              <i className="fas fa-user-circle text-gray-700 w-5"></i>
+              <span>Login</span>
+            </div>
           </div>
         </div>
       </div>
