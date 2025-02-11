@@ -1,6 +1,13 @@
 import { useState } from "react";
 import RentmoshLogo from "../assets/images/Rentmosh-logo.png";
-import { Heart, ShoppingCart, Menu, X, MapPin, ChevronDown } from "lucide-react";
+import {
+  Heart,
+  ShoppingCart,
+  Menu,
+  X,
+  MapPin,
+  ChevronDown,
+} from "lucide-react";
 import SearchBar from "./ui/SearchBar";
 import Modal from "./ui/CityModal";
 import Dropdown from "./ui/DropDown";
@@ -15,7 +22,6 @@ const Header = () => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [openSubmenu, setOpenSubmenu] = useState(null);
-
 
   const cityList = [
     { name: "Mumbai", img: city },
@@ -51,7 +57,8 @@ const Header = () => {
             <SearchBar />
             <MapPin
               onClick={() => setIsModalOpen(true)}
-              className="w-5 h-5 text-gray-700" />
+              className="w-5 h-5 text-gray-700"
+            />
           </div>
         </div>
 
@@ -74,12 +81,15 @@ const Header = () => {
           {/* Categories Dropdown */}
           <div className="flex space-x-6">
             {dropdownData.map((category, index) => (
-              <Dropdown key={index} options={category.items} label={category.label} />
+              <Dropdown
+                key={index}
+                options={category.items}
+                label={category.label}
+              />
             ))}
           </div>
 
           {/* Search and Actions */}
-
 
           <div className="flex items-center space-x-4">
             <Link to="/whishlist" className="hover:bg-gray-100 p-2 rounded-md">
@@ -101,8 +111,9 @@ const Header = () => {
 
       {/* Mobile Menu - Slides in from top when menuOpen is true */}
       <div
-        className={`lg:hidden fixed inset-0 z-50 transform transition-transform duration-300 ease-in-out ${menuOpen ? 'translate-y-0' : '-translate-y-full'
-          }`}
+        className={`lg:hidden fixed inset-0 z-50 transform transition-transform duration-300 ease-in-out ${
+          menuOpen ? "translate-y-0" : "-translate-y-full"
+        }`}
       >
         <div className="bg-white h-full overflow-y-auto pb-20">
           {/* Close button for mobile menu */}
@@ -117,12 +128,11 @@ const Header = () => {
 
           <div className="px-4 space-y-4">
             {/* City Selector */}
-            <div
-              className="flex items-center justify-between p-2 hover:bg-gray-100 rounded-md text-gray-700 cursor-pointer"
-            >
+            <div className="flex items-center justify-between p-2 hover:bg-gray-100 rounded-md text-gray-700 cursor-pointer">
               <div
                 onClick={() => setIsModalOpen(true)}
-                className="flex items-center justify-center">
+                className="flex items-center justify-center"
+              >
                 <FaMapMarkerAlt className="text-gray-700 mr-1" size={17} />
                 <span>{selectedCity}</span>
               </div>
@@ -140,7 +150,9 @@ const Header = () => {
               <div key={index}>
                 <button
                   className="w-full text-left py-2 hover:bg-gray-100"
-                  onClick={() => setOpenSubmenu(openSubmenu === index ? null : index)}
+                  onClick={() =>
+                    setOpenSubmenu(openSubmenu === index ? null : index)
+                  }
                 >
                   <div className="flex items-center">
                     {category.label}
@@ -150,7 +162,12 @@ const Header = () => {
                 {openSubmenu === index && (
                   <div className="ml-4 text-gray-600">
                     {category.items.map((item, i) => (
-                      <div key={i} className="py-2 px-3 rounded-md active:bg-gray-100">{item}</div>
+                      <div
+                        key={i}
+                        className="py-2 px-3 rounded-md active:bg-gray-100"
+                      >
+                        {item}
+                      </div>
                     ))}
                   </div>
                 )}
