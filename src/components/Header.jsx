@@ -46,13 +46,13 @@ const Header = () => {
   return (
     <header className="bg-white shadow-sm">
       {/* Main Header */}
+
       <div className="flex items-center justify-between px-4 md:px-6 lg:px-34 h-16 max-w-[1600px] mx-auto w-full">
-        {/* Left Section - Logo */}
+        {/* Left Section - Logo, Search, MapPin */}
         <div className="flex items-center space-x-4">
           <Link to="/">
             <img src={RentmoshLogo} alt="RentMosh Logo" className="w-52" />
           </Link>
-
           <div className="hidden md:flex items-center justify-center gap-3">
             <SearchBar />
             <MapPin
@@ -76,9 +76,8 @@ const Header = () => {
           </button>
         </div>
 
-        {/* Desktop Navigation - Hidden on mobile/tablet */}
-        <div className="hidden lg:flex items-center space-x-6 justify-center">
-          {/* Categories Dropdown */}
+        {/* Center Section - Categories Dropdown (Visible on larger screens) */}
+        <div className="hidden lg:flex">
           <div className="flex space-x-6">
             {dropdownData.map((category, index) => (
               <Dropdown
@@ -88,22 +87,22 @@ const Header = () => {
               />
             ))}
           </div>
+        </div>
 
-          {/* Search and Actions */}
-          <div className="flex items-center justify-end space-x-4 w-full">
-            <Link to="/whishlist" className="hover:bg-gray-100 p-2 rounded-md">
-              <Heart className="w-5 h-5 text-gray-700" />
-            </Link>
-            <Link to="/cart" className="hover:bg-gray-100 p-2 rounded-md">
-              <ShoppingCart className="w-5 h-5 text-gray-700" />
-            </Link>
-            <div
-              className="flex items-center gap-1 hover:bg-gray-100 rounded-md p-2 cursor-pointer"
-              onClick={() => setIsLoginModalOpen(true)}
-            >
-              <i className="fas fa-user-circle text-gray-700 w-5"></i>
-              <span>Login</span>
-            </div>
+        {/* Right Section - Wishlist, Cart, Login */}
+        <div className="hidden lg:flex items-center space-x-4">
+          <Link to="/whishlist" className="hover:bg-gray-100 p-2 rounded-md">
+            <Heart className="w-5 h-5 text-gray-700" />
+          </Link>
+          <Link to="/cart" className="hover:bg-gray-100 p-2 rounded-md">
+            <ShoppingCart className="w-5 h-5 text-gray-700" />
+          </Link>
+          <div
+            className="flex items-center gap-1 hover:bg-gray-100 rounded-md p-2 cursor-pointer"
+            onClick={() => setIsLoginModalOpen(true)}
+          >
+            <i className="fas fa-user-circle text-gray-700 w-5"></i>
+            <span>Login</span>
           </div>
         </div>
       </div>
