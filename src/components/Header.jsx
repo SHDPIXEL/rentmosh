@@ -54,10 +54,10 @@ const Header = () => {
             <img src={RentmoshLogo} alt="RentMosh Logo" className="w-52" />
           </Link>
           <div className="hidden md:flex items-center justify-center gap-3">
-            <SearchBar />
+            <SearchBar className="text-gray-700 hover:bg-gray-100 rounded-md"/>
             <MapPin
               onClick={() => setIsModalOpen(true)}
-              className="w-5 h-5 text-gray-700"
+              className="w-5 h-5 text-gray-700 hover:bg-gray-100 rounded-md"
             />
           </div>
         </div>

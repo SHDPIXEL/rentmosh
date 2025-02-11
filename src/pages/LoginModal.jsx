@@ -30,7 +30,7 @@ const LoginModal = ({ isOpen, onClose }) => {
         <div
           className="flex flex-col md:flex-row w-full max-w-[90%] md:max-w-[70%] lg:max-w-[50%] bg-white rounded-lg shadow-lg overflow-hidden"
           onClick={(e) => e.stopPropagation()}
-        >
+        > 
           {/* Left Side (Form) */}
           <div className="flex-1 p-6 bg-white flex flex-col justify-center items-center">
             <h2 className="text-lg font-bold text-gray-700 mb-4 self-start">
