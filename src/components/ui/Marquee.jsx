@@ -36,7 +36,7 @@ const MarqueeComponent = () => {
                 <Marquee speed={40}>
                         {
                             marqueeDetails.map((item, index) => (
-                                <div className="flex items-center justify-center gap-3 text-blue-900 md:text-sm text-xs px-10">
+                                <div key={index} className="flex items-center justify-center gap-3 text-blue-900 md:text-sm text-xs px-10">
                                     <div>{item.icon}</div>
                                     <div>{item.title}</div>
                                 </div>
