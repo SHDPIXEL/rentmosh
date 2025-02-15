@@ -1,15 +1,12 @@
 import { Tag, Gift, Percent, BadgeCheck, Copy } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
-const OffersCard = ({ offer }) => {
-  const iconMap = {
-    tag: Tag,
-    gift: Gift,
-    percent: Percent,
-    badge: BadgeCheck,
-  };
+const OffersCard = ({ offer,icon: IconComponent }) => {
 
-  const IconComponent = iconMap[offer.icon] || Tag;
+  if (!IconComponent) {
+    console.error("Icon component is undefined. Please check your icon mapping.");
+    return null;
+  }
 
   const copyToClipboard = async (code) => {
     try {

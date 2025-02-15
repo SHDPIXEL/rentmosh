@@ -20,7 +20,6 @@ const AuthProvider = ({ children }) => {
     const expirationTime = Date.now() + 3600000; // 1 hour from now
     localStorage.setItem('authToken', token);
     localStorage.setItem('tokenExpiration', expirationTime.toString());
-    localStorage.setItem('type', type);
     setAuthToken(token);
     setIsAuthenticated(true);
   };
@@ -30,7 +29,6 @@ const AuthProvider = ({ children }) => {
     const expirationTime = Date.now() + 3600000; // 1 hour from now
     localStorage.setItem('authToken', token);
     localStorage.setItem('tokenExpiration', expirationTime.toString());
-    localStorage.setItem('type', type);
     setAuthToken(token);
     setIsAuthenticated(true);
   };

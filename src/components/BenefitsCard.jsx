@@ -1,15 +1,13 @@
-import { Truck, Shield, Clock, Package } from 'lucide-react';
+import { Truck, Shield, Clock, Package } from "lucide-react";
 
-// Benefits Card Component
 const BenefitsCard = ({ benefit }) => {
-  const iconMap = {
-    truck: Truck,
-    shield: Shield,
-    clock: Clock,
-    package: Package
-  };
+  const IconComponent = benefit.icon;
 
-  const IconComponent = iconMap[benefit.icon] || Package;
+
+  if (!IconComponent) {
+    console.error("Icon component is undefined. Please check your icon mapping.");
+    return null;
+  }
 
   return (
     <div className="flex flex-col items-center p-6 bg-white rounded-xl border border-gray-200 hover:shadow-md transition-shadow duration-300">

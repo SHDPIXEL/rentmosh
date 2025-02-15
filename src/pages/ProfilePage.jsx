@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Download, Pencil, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import API from "../lib/api";
 
 const ProfilePage = () => {
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -8,13 +9,28 @@ const ProfilePage = () => {
     fullName: "",
     contact: "",
     address: "",
-    landmark: "",
+    nearestLandmark: "",
     postalCode: "",
     city: "",
   });
   const [isEditing, setIsEditing] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    fetchAddresses();
+  }, []);
+
+  // Function to Fetch Addresses
+  const fetchAddresses = async () => {
+    try {
+      const response = await API.get('/user/addresses');
+      console.log(response.data)
+      setAddresses(response.data);
+    } catch (error) {
+      console.error("Error fetching addresses:", error);
+    }
+  };
 
   const handleInputChange = (e) => {
     setAddressData({ ...addressData, [e.target.name]: e.target.value });
@@ -31,7 +47,7 @@ const ProfilePage = () => {
     setAddressData(addresses[index]);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (isEditing) {
       const updatedAddresses = [...addresses];
       updatedAddresses[editIndex] = addressData;
@@ -39,13 +55,23 @@ const ProfilePage = () => {
       setIsEditing(false);
       setEditIndex(null);
     } else {
-      setAddresses([...addresses, addressData]);
+      try {
+        const response = await API.post("/user/addresses", addressData);
+        
+        if (response.status === 201) {
+          fetchAddresses(); // Refresh the list after successful submission
+        } else {
+          console.error("Failed to add address:", response);
+        }
+      } catch (error) {
+        console.error("Error adding address:", error);
+      }
     }
     setAddressData({
       fullName: "",
       contact: "",
       address: "",
-      landmark: "",
+      nearestLandmark: "",
       postalCode: "",
       city: "",
     });
@@ -105,10 +131,12 @@ const ProfilePage = () => {
       </div>
     ),
     address: (
+      <>
+      {activeSection === "address" && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Address Form */}
         <div className="p-6 rounded-lg space-y-4">
-          {["fullName", "contact", "address", "landmark", "postalCode", "city"].map((name) => (
+          {["fullName", "contact", "address", "nearestLandmark", "postalCode", "city"].map((name) => (
             <div key={name} className="w-full">
               <input
                 type="text"
@@ -161,6 +189,8 @@ const ProfilePage = () => {
           ))}
         </div>
       </div>
+    )}
+    </> 
     ),
     payments: (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

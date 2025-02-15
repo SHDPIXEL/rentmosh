@@ -1,74 +1,120 @@
-import React, { useState } from 'react';
-import { Heart, Trash2, ShoppingCart, Clock, ArrowRight } from 'lucide-react';
-import BenefitsCard from '../components/BenefitsCard';
-import sofa from "../assets/images/sofa.png"
+import React, { useState, useEffect } from "react";
+import {
+  Heart,
+  Trash2,
+  ShoppingCart,
+  Truck,
+  Shield,
+  Clock,
+  Package,
+  ArrowRight,
+} from "lucide-react";
+import BenefitsCard from "../components/BenefitsCard";
+import toast, { Toaster } from "react-hot-toast";
+import API from "../lib/api";
+import sofa from "../assets/images/sofa.png";
+import { useNavigate } from "react-router-dom";
 
 // Wishlist Page Component
 const WishlistPage = () => {
-  const [wishlistItems, setWishlistItems] = useState([
-    {
-      id: 1,
-      title: "Modern Comfort Sofa",
-      price: 299.99,
-      discount: 15,
-      image: sofa,
-      available: true,
-      addedDate: "2024-01-15"
-    },
-    {
-      id: 2,
-      title: "Ergonomic Office Chair",
-      price: 199.99,
-      discount: 10,
-      image: sofa,
-      available: true,
-      addedDate: "2024-01-20"
-    },
-    {
-      id: 3,
-      title: "Minimalist Coffee Table",
-      price: 149.99,
-      discount: 0,
-      image: sofa,
-      available: false,
-      addedDate: "2024-01-25"
-    }
-  ]);
+  const [wishlistItems, setWishlistItems] = useState([]);
+  const [benefitDetails, setBenefitDetails] = useState([]);
+  const navigate = useNavigate(); // ✅ Initialize navigate inside the component
 
-  const BenefitDetails = [
-    {
-      icon: "clock",
-      title: "Save for Later",
-      description: "Keep track of items you love and purchase them when you're ready"
-    },
-    {
-      icon: "truck",
-      title: "Quick Purchase",
-      description: "Easily move items to cart and complete your purchase"
-    },
-    {
-      icon: "shield",
-      title: "Price Alerts",
-      description: "Get notified when your saved items go on sale"
-    },
-    {
-      icon: "package",
-      title: "Share Lists",
-      description: "Share your wishlist with friends and family"
-    }
-  ]
+  useEffect(() => {
+    const fetchWishlist = async () => {
+      try {
+        const authToken = localStorage.getItem("authToken"); // Retrieve token from local storage
+        if (!authToken) {
+          toast.error("Unauthorized! Please log in.");
+          navigate("/login"); // ✅ Redirect to login if no token is found
+          return;
+        }
+  
+        const response = await API.get('/user/wishlist', {
+          headers: {
+            Authorization: `Bearer ${authToken}`, // Send token in the header
+          },
+        });
+  
+        // Extract product details safely
+        const formattedWishlist = response.data?.wishlistItems.map((item) => ({
+          id: item.id,
+          title: item.Product?.title || "No title", // Ensure safe access
+          image: item.Product?.product_image || "",
+          price: item.Product?.price ? JSON.parse(item.Product.price) : [],
+          addedDate: item.createdAt || "00-00-0000",
+        }));
 
-  const removeFromWishlist = (id) => {
-    setWishlistItems((items) => items.filter((item) => item.id !== id));
+        setWishlistItems(formattedWishlist);
+      } catch (error) {
+        console.error("Error fetching wishlist:", error);
+        
+        if (error.response && error.response.status === 401) {
+          toast.error("Session expired! Please log in again.");
+          localStorage.removeItem("authToken"); // ✅ Clear token
+          navigate("/login"); // ✅ Redirect to login
+        } else {
+          toast.error("Error fetching wishlist!");
+        }
+
+        setWishlistItems([]); // Prevent undefined state
+      }
+    };
+  
+    fetchWishlist();
+  }, [navigate]); // ✅ Include navigate in dependencies to avoid stale closure
+
+
+  useEffect(() => {
+    const fetchBenefitDetails = async () => {
+      try {
+        const response = await API.get("/benefits/benefit");
+        const benefits = response.data;
+
+        const formattedBenefits = benefits.map((benefit, index) => ({
+          icon: [Truck, Clock, Shield, Package][index % 4], // Sequential icons (Clock, Truck, Shield, Package)
+          title: benefit.title,
+          description: benefit.description,
+        }));
+
+        setBenefitDetails(formattedBenefits);
+      } catch (error) {
+        console.error("Error fetching benefit details:", error);
+        toast.error("Error fetching benefit details:", error);
+      }
+    };
+
+    fetchBenefitDetails();
+  }, []);
+
+
+  const removeFromWishlist = async (productId) => {
+    try {
+      const response = await API.delete("/user/wishlist",{productId});
+  
+      // ✅ Check if the response is successful
+      if (response.status === 200) {
+        setWishlistItems((items) => items.filter((item) => item.id !== productId));
+        toast.success(`Product removed from wishlist`);
+      } else {
+        throw new Error("Unexpected response from server");
+      }
+    } catch (error) {
+      console.error("Error removing item:", error);
+      toast.error("Error removing item. Please try again.");
+    }
   };
+
 
   return (
     <div className="mx-auto px-4 py-8">
       {/* Header */}
+      <Toaster position="top-right" reverseOrder={false} />
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Wishlist</h1>
-          <p className="text-gray-600">{wishlistItems.length} items</p>
+          <p className="text-gray-600">{wishlistItems?.length || 0} items</p>
         </div>
         {wishlistItems.length > 0 && (
           <button className="text-red-800 hover:text-red-700 text-sm font-medium">
@@ -102,18 +148,15 @@ const WishlistPage = () => {
                   </h3>
 
                   <div className="flex items-center space-x-2 mb-2">
-                    <span className="md:text-xl text-sm font-bold text-gray-900">
-                    ₹{(item.price * (100 - item.discount) / 100).toFixed(2)}
-                    </span>
-                    {item.discount > 0 && (
-                      <>
-                        <span className="md:text-sm text-xs text-gray-500 line-through">
-                          ${item.price}
-                        </span>
-                        <span className="md:text-sm text-xs text-red-500 font-medium">
-                          {item.discount}% OFF
-                        </span>
-                      </>
+                    {item.price.length > 0 ? (
+                      item.price.map((p, index) => (
+                        <div key={index} className="text-gray-900 text-sm">
+                          {p.months}:{" "}
+                          <span className="font-bold">₹{p.amount}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-gray-500">Price not available</span>
                     )}
                   </div>
 
@@ -168,10 +211,12 @@ const WishlistPage = () => {
 
       {/* Benefits Section */}
       <div className="mt-12">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">Why Save to Wishlist?</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">
+          Why Save to Wishlist?
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {BenefitDetails.map((benefit, index) => (
-            <BenefitsCard key={index} benefit={benefit} />
+          {benefitDetails.map((benefit, index) => (
+            <BenefitsCard key={index} benefit={benefit} icon={benefit.icon} />
           ))}
         </div>
       </div>

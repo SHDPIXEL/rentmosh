@@ -27,11 +27,11 @@ function App() {
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
               <Route
-                path="/category/:categoryName"
+                path="/category/:id/:categoryName/"
                 element={<CategoryPage />}
               />
               <Route path="/product/:productId" element={<ProductPage />} />
-              <Route path="/whishlist" element={<WishlistPage />} />
+              <Route path="/wishlist" element={<ProtectedRoute element={<WishlistPage />} />} />
               <Route path="/cart" element={<CartPage />} />
               <Route
                 path="/dashboard"

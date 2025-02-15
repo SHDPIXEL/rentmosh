@@ -20,7 +20,7 @@ const Modal = ({ isOpen, onClose, cityList, onCitySelect }) => {
                         onClick={() => onCitySelect(city)}
                         className="flex items-center gap-4 hover:bg-gray-100 rounded-lg p-2">
                             <img
-                                src={city.img}
+                                src={city.city_image}
                                 alt={city.name}
                                 className="md:w-16 md:h-16 w-12 h-12 aspect-3/2 rounded-md cursor-pointer"
                             />

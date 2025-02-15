@@ -1,15 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { Star, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import API from "../lib/api";
+import toast, { Toaster } from "react-hot-toast";
 
 const ProductCard = ({ product }) => {
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isLiked, setIsLiked] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
   const navigate = useNavigate();
+
+
+  const handleAddToWishlist = async () => {
+    try {
+      await API.post("/user/wishlist", { productId: product.id });
+      setIsWishlisted(true);
+      toast.success('Product added to Wishlist')
+    } catch (error) {
+      console.error("Error adding to wishlist:", error);
+    }
+  };
 
   const handleProductClick = () => {
     navigate(`/product/${product.id}`);
   };
+
+  const parsedPrice = JSON.parse(product.price || "[]");
+  const firstPrice = parsedPrice.length > 0 ? parsedPrice[0] : null;
+
+  // console.log("Product Data:", product);
+  // console.log("Product Images:", product.product_image);
+  if (!product) {
+    return (
+      <div className="p-4 border rounded shadow-sm">Invalid product data</div>
+    );
+  }
 
   return (
     <div
@@ -19,7 +43,7 @@ const ProductCard = ({ product }) => {
       {/* Image Section */}
       <div className="relative w-full h-40 sm:h-56 rounded-lg overflow-hidden">
         <img
-          src={product.images[selectedImage]}
+          src={product.product_image[selectedImage]}
           alt={product.title}
           className="w-full h-full object-cover"
         />
@@ -33,31 +57,45 @@ const ProductCard = ({ product }) => {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setIsLiked(!isLiked);
+            handleAddToWishlist(); // Call the wishlist function
           }}
           className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-md"
         >
           <Heart
-            className={`w-4 h-4 ${isLiked ? "fill-red-500 text-red-500" : "text-gray-600"}`}
+            className={`w-4 h-4 ${
+              isWishlisted ? "fill-red-500 text-red-500" : "text-gray-600"
+            }`}
           />
         </button>
       </div>
 
       {/* Thumbnails */}
       <div className="flex space-x-1 p-2 overflow-x-auto no-scrollbar">
-        {product.images.map((img, index) => (
-          <button
-            key={index}
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedImage(index);
-            }}
-            className={`w-10 h-10 rounded border-2 ${selectedImage === index ? "border-blue-500" : "border-transparent"
+        {Array.isArray(product.product_image) &&
+        product.product_image.length > 0 ? (
+          product.product_image.map((img, index) => (
+            <button
+              key={index}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImage(index);
+              }}
+              className={`w-10 h-10 rounded border-2 ${
+                selectedImage === index
+                  ? "border-blue-500"
+                  : "border-transparent"
               }`}
-          >
-            <img src={img} alt={`${product.title}-${index}`} className="w-full h-full object-cover rounded" />
-          </button>
-        ))}
+            >
+              <img
+                src={img}
+                alt={`${product.title}-${index}`}
+                className="w-full h-full object-cover rounded"
+              />
+            </button>
+          ))
+        ) : (
+          <p className="text-gray-500">No Images Available</p>
+        )}
       </div>
 
       {/* Product Info */}
@@ -71,24 +109,37 @@ const ProductCard = ({ product }) => {
           {[...Array(5)].map((_, index) => (
             <Star
               key={index}
-              className={`w-3 h-3 sm:w-4 sm:h-4 ${index < product.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-                }`}
+              className={`w-3 h-3 sm:w-4 sm:h-4 ${
+                index < product.rating
+                  ? "fill-yellow-400 text-yellow-400"
+                  : "text-gray-300"
+              }`}
             />
           ))}
-          <span className="text-xs text-gray-600 ml-1">({product.reviews})</span>
-        </div>  
+          <span className="text-xs text-gray-600 ml-1">
+            ({product.reviews})
+          </span>
+        </div>
 
         {/* Price Section */}
         <div className="flex flex-col md:flex-row items-baseline">
-          <span className="text-lg sm:text-xl font-bold text-gray-900">
-            ₹{(product.price * (100 - product.discount) / 100).toFixed(2)}
-          </span>
-          <div>
-            <span className="ml-1 text-xs text-gray-500 line-through">₹{product.price}</span>
-            <span className="ml-1 text-xs text-gray-600">/month</span>
-          </div>
+          {firstPrice ? (
+            <>
+              <span className="text-lg sm:text-xl font-bold text-gray-900">
+                ₹{firstPrice.amount}
+              </span>
+              <div>
+                <span className="ml-1 text-xs text-gray-600">
+                  ({firstPrice.months})
+                </span>
+              </div>
+            </>
+          ) : (
+            <p className="text-gray-500">Price not available</p>
+          )}
         </div>
       </div>
+      <Toaster position="top-right" reverseOrder={false} />
     </div>
   );
 };

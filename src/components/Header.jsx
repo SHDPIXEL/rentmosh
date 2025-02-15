@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import RentmoshLogo from "../assets/images/Rentmosh-logo.png";
 import {
   Heart,
@@ -14,34 +14,79 @@ import SearchBar from "./ui/SearchBar";
 import Modal from "./ui/CityModal";
 import Dropdown from "./ui/DropDown";
 import city from "../assets/images/city.jpg";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import toast, { Toaster } from "react-hot-toast";
+import API from "../lib/api";
 import LoginModal from "../pages/LoginModal";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { AuthContext } from "../context/authContext";
 
 const Header = () => {
-  const { isAuthenticated, isTokenExpired, logout } = useContext(AuthContext);
+  const { isAuthenticated, isTokenExpired, logout } =
+    useContext(AuthContext);
   const [selectedCity, setSelectedCity] = useState("Mumbai");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [openSubmenu, setOpenSubmenu] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [cityList, setCityList] = useState([]); // Fetch cities dynamically
+  const [dropdownData, setDropdownData] = useState([]);
 
-  const cityList = [
-    { name: "Mumbai", img: city },
-    { name: "Vadodara", img: city },
-    { name: "Udaipur", img: city },
-    { name: "Pune", img: city },
-    { name: "Gandhinagar", img: city },
-  ];
+  const navigate = useNavigate();
 
-  const dropdownData = [
-    { label: "Furniture", items: ["Bed", "Table", "Chair"] },
-    { label: "Appliance", items: ["Washing Machine", "Fridge", "Microwave"] },
-    { label: "Electronics", items: ["Mobile", "Laptop", "Headphones"] },
-    { label: "Books", items: ["Fiction", "Non-Fiction", "Comics"] },
-  ];
+
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        const response = await API.get("/city/cities");
+        setCityList(response.data.cities); // Assuming response is an array of city objects
+      } catch (error) {
+        console.error("Error fetching cities:", error);
+        toast.error("Failed to fetch cities.", { position: "top-right" });
+      }
+    };
+
+    fetchCities();
+  }, []);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await API.get("/category/categories"); // Adjust the endpoint as needed
+        // const categories = response.data; // Ensure the response format is correct
+
+        const categories = response.data.filter(
+          (category) => category.status === "Active"
+        );
+
+        const formattedData = await Promise.all(
+          categories.map(async (category) => {
+            // Fetch subcategories for each category
+            const subcategoryResponse = await API.get(
+              `/subcategory/category/${category.id}`
+            );
+            // Filter only active subcategories
+            const subcategories = (
+              subcategoryResponse.data.subcategories || []
+            ).filter((sub) => sub.status === "Active");
+
+            return {
+              label: category.name, // Category name as label
+              items: subcategories.map((sub) => sub.name), // Subcategory names as items
+            };
+          })
+        );
+
+        setDropdownData(formattedData);
+      } catch (error) {
+        console.error("Error fetching categories and subcategories:", error);
+        toast.error("Failed to fetch categories.", { position: "top-right" });
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleCitySelect = (city) => {
     setSelectedCity(city.name);
@@ -108,7 +153,11 @@ const Header = () => {
 
         {/* Right Section - Wishlist, Cart, Login */}
         <div className="hidden lg:flex items-center space-x-4">
-          <Link to="/whishlist" className="hover:bg-gray-100 p-2 rounded-md">
+          <Link
+            to="/wishlist"
+            className="hover:bg-gray-100 p-2 rounded-md"
+            
+          >
             <Heart className="w-5 h-5 text-gray-700" />
           </Link>
           <Link to="/cart" className="hover:bg-gray-100 p-2 rounded-md">
@@ -222,9 +271,8 @@ const Header = () => {
 
             {/* Actions */}
             <Link
-              to="/whishlist"
+              to="/wishlist"
               className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-md w-full"
-              onClick={() => setMenuOpen(false)}
             >
               <Heart className="w-5 h-5 text-gray-700" />
               <span>Wishlist</span>
@@ -279,6 +327,7 @@ const Header = () => {
               )}
             </div>
           </div>
+          <Toaster position="top-right" reverseOrder={false} />
         </div>
 
         {/* Backdrop */}

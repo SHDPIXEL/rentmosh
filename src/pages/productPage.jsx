@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Star,
   Heart,
@@ -14,106 +14,115 @@ import {
 import sofa from "../assets/images/sofa.png";
 import toast, { Toaster } from "react-hot-toast";
 import ProductCard from "../components/ProductCard"; // Import ProductCard component
+import API from "../lib/api";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
 const ProductPage = () => {
   const { productId } = useParams();
+  const [product, setProduct] = useState(null);
+  const [benefit, setBenefit] = useState([]);
   const [mainImage, setMainImage] = useState(0);
-  const [isLiked, setIsLiked] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
   const scrollRef = useRef(null);
   const [currentOfferIndex, setCurrentOfferIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]); // State to store related products
+  const [offerDetails, setofferDetails] = useState([]);
+  const [rating, setRating] = useState(0);
+  const [selectedMonth, setSelectedMonth] = useState(3);
+  const [priceOptions, setPriceOptions] = useState({}); // State to store dynamic price options
+  const [selectedPrice, setSelectedPrice] = useState(priceOptions[3]); // Default price for 3 months
 
-  const products = [
-    {
-      id: 1,
-      title: "Modern Comfort Sofa",
-      description:
-        "Experience ultimate comfort with our modern design sofa. Perfect for your living room with its ergonomic design and premium materials.",
-      price: 299.99,
-      discount: 15,
-      rating: 4.5,
-      reviews: 128,
-      images: [sofa, sofa, sofa, sofa],
-      offers: "Free Delivery + Assembly",
-      Tags: [
-        { label: "Material", value: "Premium Fabric" },
-        { label: "Dimensions", value: "L200 x W85 x H70 cm" },
-        { label: "Color", value: "Slate Gray" },
-        { label: "Weight", value: "45 kg" },
-      ],
-      benefits: [
-        {
-          icon: "truck",
-          title: "Fast Delivery",
-          description: "Delivered within 2 days",
-        },
-        {
-          icon: "shield",
-          title: "1 Year Warranty",
-          description: "On manufacturing defects",
-        },
-        {
-          icon: "clock",
-          title: "24/7 Support",
-          description: "We’re here to help anytime",
-        },
-        {
-          icon: "package",
-          title: "Easy Returns",
-          description: "Hassle-free return policy",
-        },
-      ],
-      offerDetails: [
-        {
-          title: "Get 10% Off",
-          icon: { Tag },
-          code: "SOFA10",
-          description: "Save 10% on all sofa purchases!",
-        },
-        {
-          title: "Free Delivery",
-          icon: { Gift },
-          code: "FREESHIP",
-          description: "Enjoy free delivery on all orders above ₹500!",
-        },
-      ],
-    },
-  ];
+  useEffect(() => {
+    const fetchProductById = async () => {
+      try {
+        const response = await API.get(`/product/products/${productId}`); // API call to fetch product
+        console.log(response.data.product);
+        setProduct(response.data.product);
 
-  const relatedProducts = [
-    {
-      id: 2,
-      title: "Luxury Recliner Chair",
-      description:
-        "A comfortable recliner with soft fabric and a sleek design.",
-      price: 349.99,
-      discount: 10,
-      rating: 4.8,
-      reviews: 100,
-      images: [sofa, sofa, sofa, sofa],
-      offers: "20% Off",
-    },
-    {
-      id: 3,
-      title: "Elegant Coffee Table",
-      description:
-        "A stylish and elegant coffee table to complement your living room.",
-      price: 129.99,
-      discount: 5,
-      rating: 4.3,
-      reviews: 45,
-      images: [sofa, sofa, sofa, sofa],
-      offers: "Free Delivery",
-    },
-  ];
+        // Extracting benefit title
+        if (response.data.product.benefit) {
+          console.log("Benefit Title:", response.data.product.benefit.title);
+          console.log(
+            "Benefit Description:",
+            response.data.product.benefit.description
+          );
+          console.log("Benefits:", response.data.product.benefit);
+          const benefits = response.data.product.benefit;
+          console.log(benefits);
+          setBenefit(benefits); // Store it in state if needed
+        }
+        // Parse price options from the product's price field
+        const parsedPriceOptions = JSON.parse(response.data.product.price);
+        console.log("PriceOptions", parsedPriceOptions);
 
-  const product = products.find((p) => p.id === parseInt(productId));
+        // Convert months string (like "6 months") to a number
+        const priceObj = parsedPriceOptions.reduce((acc, item) => {
+          const months = parseInt(item.months, 10); // Extract number of months
+          acc[months] = item.amount;
+          return acc;
+        }, {});
 
-  if (!product) {
-    return (
-      <div className="text-center text-red-500 text-lg">Product Not Found</div>
-    );
-  }
+        setPriceOptions(priceObj); // Set price options dynamically based on the product data
+
+        const relatedResponse = await API.get(
+          `/product/products/${productId}/exploremore`
+        );
+        console.log(relatedResponse.data);
+        console.log(relatedResponse.data.data);
+        setRelatedProducts(relatedResponse.data.data);
+      } catch (err) {
+        setError("Error fetching product details");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProductById();
+  }, [productId]);
+
+  useEffect(() => {
+    if (product?.rating) {
+      setRating(Math.floor(product.rating));
+    }
+  }, [product]);
+
+  //const product = products.find((p) => p.id === parseInt(productId));
+
+  useEffect(() => {
+    const fetchOfferDetails = async () => {
+      try {
+        const response = await API.get("/offer/offers");
+        console.log(response.data.offers); // Log the structure of response.data
+
+        const offers = response.data.offers;
+
+        if (Array.isArray(offers)) {
+          const formattedOffers = offers.map((offer, index) => ({
+            icon: [Tag, Gift][index % 4], // Sequential icons
+            title: offer.title,
+            description: offer.description,
+            code: offer.code,
+          }));
+
+          setofferDetails(formattedOffers);
+        } else {
+          console.error("API response is not an array:", offers);
+        }
+      } catch (error) {
+        console.error("Error fetching offer details:", error);
+      }
+    };
+
+    fetchOfferDetails();
+  }, []);
+
+  // if (!product) {
+  //   return (
+  //     <div className="text-center text-red-500 text-lg">Product Not Found</div>
+  //   );
+  // }
 
   const scroll = (direction) => {
     if (scrollRef.current) {
@@ -125,45 +134,55 @@ const ProductPage = () => {
     }
   };
 
-  useEffect(() => {
-    const autoplayInterval = setInterval(() => {
-      setCurrentOfferIndex((prevIndex) => {
-        const nextIndex = prevIndex + 1;
-        return nextIndex >= product.offerDetails.length ? 0 : nextIndex; // Loop back to the first offer if we reach the end
-      });
-    }, 3000); // 3000ms = 3 seconds
+  const parsedPrice =
+    product && Array.isArray(product.price)
+      ? product.price
+      : product
+      ? JSON.parse(product.price || "[]")
+      : [];
 
-    // Cleanup interval when component unmounts or when autoplay stops
-    return () => clearInterval(autoplayInterval);
-  }, [product.offerDetails.length]); // Depend on the offerDetails length
+  {
+    parsedPrice.length > 0 ? (
+      parsedPrice.map((priceOption) => (
+        <option key={priceOption.months} value={priceOption.months}>
+          {priceOption.months} Months
+        </option>
+      ))
+    ) : (
+      <option disabled>No available price options</option>
+    );
+  }
 
-  // Function to handle the previous slide
+  const firstPrice = parsedPrice.length > 0 ? parsedPrice[0] : null;
+
+  const handleAddToWishlist = async () => {
+    try {
+      await API.post("/user/wishlist", { productId: product.id });
+      setIsWishlisted(true);
+      toast.success('Product added to Wishlist')
+    } catch (error) {
+      console.error("Error adding to wishlist:", error);
+    }
+  };
+
   const handlePrevSlide = () => {
-    setCurrentOfferIndex(
-      currentOfferIndex === 0
-        ? product.offerDetails.length - 1
-        : currentOfferIndex - 1
+    setCurrentOfferIndex((prevIndex) => {
+      const nextIndex =
+        prevIndex === 0 ? offerDetails.length - 1 : prevIndex - 1;
+      return nextIndex;
+    });
+  };
+
+  const handleNextSlide = useCallback(() => {
+    setCurrentOfferIndex((prevIndex) =>
+      prevIndex === offerDetails.length - 1 ? 0 : prevIndex + 1
     );
-  };
+  }, [offerDetails.length]);
 
-  // Function to handle the next slide
-  const handleNextSlide = () => {
-    setCurrentOfferIndex(
-      currentOfferIndex === product.offerDetails.length - 1
-        ? 0
-        : currentOfferIndex + 1
-    );
-  };
-
-  const priceOptions = {
-    3: 1000, // Price for 3 months
-    6: 1800, // Price for 6 months
-    12: 3000, // Price for 12 months
-  };
-
-  const [selectedMonth, setSelectedMonth] = useState(3);
-  const [selectedPrice, setSelectedPrice] = useState(priceOptions[3]); // Default price for 3 months
-
+  useEffect(() => {
+    const interval = setInterval(handleNextSlide, 3000);
+    return () => clearInterval(interval);
+  }, [handleNextSlide]);
   const handleMonthChange = (event) => {
     const month = Number(event.target.value);
     setSelectedMonth(month);
@@ -196,11 +215,11 @@ const ProductPage = () => {
     }
   };
 
-  const [rating, setRating] = useState(Math.floor(product.rating));
-
   const handleRatingClick = (index) => {
     setRating(index + 1); // Set the rating based on clicked star
   };
+
+  if (loading) return <p>Loading...</p>;
 
   return (
     <>
@@ -215,7 +234,7 @@ const ProductPage = () => {
             {/* Main Image */}
             <div className="relative flex justify-center items-center h-100 top-8 rounded-xl overflow-hidden">
               <img
-                src={product.images[mainImage]}
+                src={product.product_image[0]}
                 alt={product.title}
                 className="w-full h-full object-contain"
               />
@@ -223,7 +242,7 @@ const ProductPage = () => {
               <button
                 onClick={() =>
                   setMainImage((prev) =>
-                    prev === 0 ? product.images.length - 1 : prev - 1
+                    prev === 0 ? product.product_image.length - 1 : prev - 1
                   )
                 }
                 className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 hover:bg-white"
@@ -234,7 +253,7 @@ const ProductPage = () => {
               <button
                 onClick={() =>
                   setMainImage((prev) =>
-                    prev === product.images.length - 1 ? 0 : prev + 1
+                    prev === product.product_image.length - 1 ? 0 : prev + 1
                   )
                 }
                 className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 hover:bg-white"
@@ -244,19 +263,27 @@ const ProductPage = () => {
             </div>
 
             {/* Thumbnails */}
-            <div className="flex justify-center space-x-4 md:mt-20 mt-10 ">
-              {product.images.map((image, index) => (
-                <img
-                  key={index}
-                  src={image}
-                  alt={`Thumbnail ${index}`}
-                  className={`md:w-20 md:h-20 w-16 h-16 rounded-lg cursor-pointer border-2 transition-all duration-300 ${mainImage === index
-                    ? "border-blue-500 scale-105"
-                    : "border-gray-300"
+            <div className="flex justify-center space-x-4 md:mt-20 mt-10">
+              {Array.isArray(product.product_image) &&
+              product.product_image.length > 0 ? (
+                product.product_image.map((image, index) => (
+                  <img
+                    key={index}
+                    src={image}
+                    alt={`Thumbnail ${index}`}
+                    className={`md:w-20 md:h-20 w-16 h-16 rounded-lg cursor-pointer border-2 transition-all duration-300 ${
+                      mainImage === index
+                        ? "border-blue-500 scale-105"
+                        : "border-gray-300"
                     }`}
-                  onClick={() => setMainImage(index)}
-                />
-              ))}
+                    onClick={() => setMainImage(index)}
+                  />
+                ))
+              ) : (
+                <div className="text-center text-gray-500">
+                  No images available
+                </div>
+              )}
             </div>
           </div>
 
@@ -276,10 +303,11 @@ const ProductPage = () => {
                       className="p-1 cursor-pointer"
                     >
                       <Star
-                        className={`md:w-5 md:h-5 w-4 h-4 ${index < rating
-                          ? "fill-yellow-400 text-yellow-400" // Filled star if the index is less than the rating
-                          : "text-gray-300" // Empty star if the index is greater than or equal to the rating
-                          }`}
+                        className={`md:w-5 md:h-5 w-4 h-4 ${
+                          index < rating
+                            ? "fill-yellow-400 text-yellow-400" // Filled star if the index is less than the rating
+                            : "text-gray-300" // Empty star if the index is greater than or equal to the rating
+                        }`}
                       />
                     </button>
                   ))}
@@ -290,27 +318,41 @@ const ProductPage = () => {
                 </div>
               </div>
               <button
-                onClick={() => setIsLiked(!isLiked)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAddToWishlist(); // Call the wishlist function
+                }}
                 className="p-2 hover:bg-gray-100 rounded-full"
               >
                 <Heart
-                  className={`md:w-6 md:h-6 h-5 w-5 ${isLiked ? "fill-red-500 text-red-500" : "text-gray-600"
-                    }`}
+                  className={`md:w-6 md:h-6 h-5 w-5 ${
+                    isWishlisted ? "fill-red-500 text-red-500" : "text-gray-600"
+                  }`}
                 />
               </button>
             </div>
 
-            <p className="text-gray-600 md:text-base text-sm">{product.description}</p>
+            <p className="text-gray-600 md:text-base text-sm">
+              {product.description}
+            </p>
             <div className="flex items-baseline space-x-4">
-              <span className="md:text-3xl text-2xl font-bold text-gray-900">
-                ₹{((product.price * (100 - product.discount)) / 100).toFixed(2)}
-              </span>
-              <span className="md:text-xl text-sm text-gray-500 line-through">
-                ₹{product.price}
-              </span>
-              <span className="text-red-500 md:text-lg text-md font-semibold">
-                {product.discount}% OFF
-              </span>
+              {firstPrice ? (
+                <>
+                  <span className="md:text-xl font-semibold text-lg text-black ">
+                    ₹{firstPrice.amount}
+                  </span>
+                  <div>
+                    <span className="mr-2 text-md text-gray-600">
+                      ({firstPrice.months})
+                    </span>
+                  </div>
+                  {/* <span className="text-red-500 md:text-lg text-md font-semibold">
+                    {product.discount}% OFF
+                  </span> */}
+                </>
+              ) : (
+                <p className="text-gray-500">Price not available</p>
+              )}
             </div>
 
             {product.offers && (
@@ -319,40 +361,37 @@ const ProductPage = () => {
               </div>
             )}
 
-            <div className="border-t pt-6 mb-0">
-              <h3 className="text-lg font-semibold mb-4">
-                Select Tenure & Price
-              </h3>
-              <div className="flex flex-wrap gap-4 items-center">
-                {/* Month Selection */}
-                <select
-                  value={selectedMonth}
-                  onChange={handleMonthChange}
-                  className="bg-gray-100 text-black font-medium md:text-md text-sm py-2 px-4 rounded-lg hover:bg-gray-200 transition duration-300"
-                >
-                  {Object.keys(priceOptions).map((month) => (
-                    <option key={month} value={month}>
-                      {month} Months
-                    </option>
-                  ))}
-                </select>
+            <div>
+              {loading && <p>Loading...</p>}
+              {error && <p>{error}</p>}
 
-                {/* Price Selection */}
-                <select
-                  value={selectedPrice}
-                  className="bg-gray-100 text-black font-medium text-md py-2 px-4 rounded-lg cursor-pointer appearance-none"
-                  disabled
-                >
-                  {Object.entries(priceOptions).map(([month, price]) => (
-                    <option
-                      key={month}
-                      value={price}
-                      selected={Number(month) === selectedMonth}
-                    >
-                      ₹{price}
-                    </option>
-                  ))}
-                </select>
+              <div className="border-t pt-6 mb-0">
+                <h3 className="text-lg font-semibold mb-4">
+                  Select Tenure & Price
+                </h3>
+                <div className="flex flex-wrap gap-4 items-center">
+                  {/* Month Selection */}
+                  <select
+                    value={selectedMonth}
+                    onChange={handleMonthChange}
+                    className="bg-gray-100 text-black font-medium md:text-md text-sm py-2 px-4 rounded-lg hover:bg-gray-200 transition duration-300"
+                  >
+                    {Object.keys(priceOptions).map((month) => (
+                      <option key={month} value={month}>
+                        {month} Months
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Price Selection */}
+                  <select
+                    value={priceOptions[selectedMonth]}
+                    className="bg-gray-100 text-black font-medium text-md py-2 px-4 rounded-lg cursor-pointer appearance-none"
+                    disabled
+                  >
+                    <option>₹{priceOptions[selectedMonth]}</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -361,47 +400,52 @@ const ProductPage = () => {
               <h3 className="text-lg font-semibold mb-2">Special Offers</h3>
               <div className="flex items-center justify-between bg-gradient-to-r from-blue-900 via-blue-950 to-violet-900 p-4 rounded-lg">
                 <div className="flex items-center gap-4">
-                  {/* Render the icon dynamically */}
-                  {product.offerDetails[currentOfferIndex].icon === "Tag" ? (
-                    <Tag size={24} className="text-blue-500" />
-                  ) : product.offerDetails[currentOfferIndex].icon ===
-                    "Gift" ? (
-                    <Gift size={24} className="text-green-500" />
-                  ) : null}
-                  <div>
-                    {/* Code with copy functionality */}
-                    <div
-                      className="flex items-center gap-2 text-black text-sm font-semibold rounded-md cursor-pointer"
-                      onClick={() =>
-                        copyToClipboard(
-                          product.offerDetails[currentOfferIndex].code
-                        )
-                      }
-                    >
-                      <div className="flex justify-center items-center">
-                        <h4 className="font-bold mb-1 text-yellow-400">
-                          {product.offerDetails[currentOfferIndex].title}
-                        </h4>
-                      </div>
-                      <div className="flex bg-yellow-400 font-semibold rounded-md p-2 justify-center items-center">
-                        Code: {product.offerDetails[currentOfferIndex].code}
-                        <Copy
-                          className="w-4 h-4 text-black cursor-pointer ml-1"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevents triggering parent click
+                  {offerDetails &&
+                  offerDetails.length > 0 &&
+                  offerDetails[currentOfferIndex] ? (
+                    <>
+                      {offerDetails[currentOfferIndex].icon === "Tag" ? (
+                        <Tag size={24} className="text-blue-500" />
+                      ) : offerDetails[currentOfferIndex].icon === "Gift" ? (
+                        <Gift size={24} className="text-green-500" />
+                      ) : null}
+                      <div>
+                        <div
+                          className="flex items-center gap-2 text-black text-sm font-semibold rounded-md cursor-pointer"
+                          onClick={() =>
                             copyToClipboard(
-                              product.offerDetails[currentOfferIndex].code
-                            );
-                          }}
-                        />
+                              offerDetails[currentOfferIndex].code
+                            )
+                          }
+                        >
+                          <div className="flex justify-center items-center">
+                            <h4 className="font-bold mb-1 text-yellow-400">
+                              {offerDetails[currentOfferIndex].title}
+                            </h4>
+                          </div>
+                          <div className="flex bg-yellow-400 font-semibold rounded-md p-2 justify-center items-center">
+                            Code: {offerDetails[currentOfferIndex].code}
+                            <Copy
+                              className="w-4 h-4 text-black cursor-pointer ml-1"
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevents triggering parent click
+                                copyToClipboard(
+                                  offerDetails[currentOfferIndex].code
+                                );
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <p className="mt-2 text-xs text-yellow-400">
+                          {offerDetails[currentOfferIndex].description}
+                        </p>
                       </div>
-                    </div>
-                    {/* Description for the offer */}
-                    <p className="mt-2 text-xs text-yellow-400">
-                      {product.offerDetails[currentOfferIndex].description}
-                    </p>
-                  </div>
+                    </>
+                  ) : (
+                    <p>No offers available</p>
+                  )}
                 </div>
+
                 <div className="flex gap-2">
                   <button
                     onClick={handlePrevSlide}
@@ -436,24 +480,27 @@ const ProductPage = () => {
             Product Benefits
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 md:gap-6 gap-3">
-            {product.benefits.map((benefit, index) => (
-              <div key={index} className="p-4">
+            {product?.benefit ? (
+              <div className="p-4">
                 <div className="bg-gray-100 border border-gray-100 overflow-hidden bg-opacity-100 p-6 rounded-xl transform transition duration-300 hover:scale-101 hover:shadow-sm">
                   <div className="flex items-center mb-4">
                     <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
                       <i className="fas fa-check text-xl text-red-800"></i>
                     </div>
                     <h4 className="ml-4 text-lg font-semibold text-black">
-                      {benefit.title}
+                      {product.benefit.title}
                     </h4>
                   </div>
-                  <p className="text-black text-sm">{benefit.description}</p>
+                  <p className="text-black text-sm">
+                    {product.benefit.description}
+                  </p>
                 </div>
               </div>
-            ))}
+            ) : (
+              <p className="text-black text-sm">No benefits available</p>
+            )}
           </div>
         </div>
-
 
         {/* Product Specifications Section */}
         <div className="mt-12">
@@ -463,20 +510,46 @@ const ProductPage = () => {
           <div className="bg-white border border-gray-200 shadow-sm rounded-xl md:p-6 p-2">
             <table className="w-full table-auto rounded-xl border-collapse">
               <tbody>
-                {product.Tags.map((spec, index) => (
-                  <tr
-                    key={index}
-                    className="hover:bg-gray-100 transition duration-200 rounded-lg overflow-hidden"
-                  >
-                    <td className="py-3 font-semibold text-gray-700 rounded-md md:text-lg text-sm p-2 pr-4">
-                      {spec.label}
-                    </td>
-                    <td className="py-3 text-gray-600 rounded-md md:text-lg text-sm">
-                      <span className="inline-block w-4 text-center">:</span>
-                      <span className="ml-2">{spec.value}</span>
-                    </td>
-                  </tr>
-                ))}
+                {/* Map over the product details and display the properties */}
+                <tr className="hover:bg-gray-100 transition duration-200 rounded-lg overflow-hidden">
+                  <td className="py-3 font-semibold text-gray-700 rounded-md md:text-lg text-sm p-2 pr-4">
+                    Brand
+                  </td>
+                  <td className="py-3 text-gray-600 rounded-md md:text-lg text-sm">
+                    <span className="inline-block w-4 text-center">:</span>
+                    <span className="ml-2">{product.brand}</span>
+                  </td>
+                </tr>
+
+                <tr className="hover:bg-gray-100 transition duration-200 rounded-lg overflow-hidden">
+                  <td className="py-3 font-semibold text-gray-700 rounded-md md:text-lg text-sm p-2 pr-4">
+                    Colour
+                  </td>
+                  <td className="py-3 text-gray-600 rounded-md md:text-lg text-sm">
+                    <span className="inline-block w-4 text-center">:</span>
+                    <span className="ml-2">{product.colour}</span>
+                  </td>
+                </tr>
+
+                <tr className="hover:bg-gray-100 transition duration-200 rounded-lg overflow-hidden">
+                  <td className="py-3 font-semibold text-gray-700 rounded-md md:text-lg text-sm p-2 pr-4">
+                    Material
+                  </td>
+                  <td className="py-3 text-gray-600 rounded-md md:text-lg text-sm">
+                    <span className="inline-block w-4 text-center">:</span>
+                    <span className="ml-2">{product.material}</span>
+                  </td>
+                </tr>
+
+                <tr className="hover:bg-gray-100 transition duration-200 rounded-lg overflow-hidden">
+                  <td className="py-3 font-semibold text-gray-700 rounded-md md:text-lg text-sm p-2 pr-4">
+                    Size
+                  </td>
+                  <td className="py-3 text-gray-600 rounded-md md:text-lg text-sm">
+                    <span className="inline-block w-4 text-center">:</span>
+                    <span className="ml-2">{product.size}</span>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -487,11 +560,15 @@ const ProductPage = () => {
           <h3 className="text-2xl font-bold text-gray-800 mb-6">
             Related Products
           </h3>
-          <div className="flex gap-6 overflow-x-auto">
-            {relatedProducts.map((relatedProduct) => (
-              <ProductCard key={relatedProduct.id} product={relatedProduct} />
-            ))}
-          </div>
+          {relatedProducts.length === 0 ? (
+            <p>No Related Products</p>
+          ) : (
+            <div className="flex gap-6 overflow-x-auto">
+              {relatedProducts.map((relatedProduct) => (
+                <ProductCard key={relatedProduct.id} product={relatedProduct} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>
