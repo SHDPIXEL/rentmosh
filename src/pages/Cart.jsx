@@ -1,58 +1,93 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Trash2,
   ShoppingCart,
   Heart,
   ArrowRight,
   CheckCircle,
-  Loader
+  Loader,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom"; // Import navigation
+import toast, { Toaster } from "react-hot-toast";
+import API from "../lib/api";
 import sofa from "../assets/images/sofa.png"; // Add an empty cart image to your assets
 
 // Cart Page Component
 const CartPage = () => {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      title: "Modern Comfort Sofa",
-      price: 299.99,
-      discount: 15,
-      image: sofa,
-      tenure: 1,
-    },
-    {
-      id: 2,
-      title: "Ergonomic Office Chair",
-      price: 199.99,
-      discount: 10,
-      image: sofa,
-      tenure: 4,
-    },
-    {
-      id: 3,
-      title: "Minimalist Coffee Table",
-      price: 149.99,
-      discount: 0,
-      image: sofa,
-      tenure: 1,
-    },
-  ]);
-
+  const [cartItems, setCartItems] = useState([]);
   // Track liked items in a state
   const [likedItems, setLikedItems] = useState({});
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate(); // Use navigation hook
 
-  const removeFromCart = (id) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
-    // Also remove from liked items if it's liked
-    setLikedItems((prev) => {
-      const newLikedItems = { ...prev };
-      delete newLikedItems[id];
-      return newLikedItems;
-    });
+  useEffect(() => {
+    const fetchCart = async () => {
+      try {
+        const authToken = localStorage.getItem("authToken"); // Retrieve token from local storage
+        if (!authToken) {
+          toast.error("Unauthorized! Please log in.");
+          navigate("/login"); // Redirect to login if no token is found
+          return;
+        }
+
+        const response = await API.get("/user/cart", {
+          headers: {
+            Authorization: `Bearer ${authToken}`, // Send token in the header
+          },
+        });
+
+        // Format the cart items safely
+        const formattedCart = response.data?.cartItems.map((item) => ({
+          id: item.productId, // Use productId from the cart
+          title: item.product?.title || "No title", // Ensure safe access to product title
+          image: item.product?.product_image || "",
+          price: item.selectedPrice || 0, // Use selectedPrice from the cart
+          selectedMonth: item.selectedMonth || 0, // Add selectedMonth from the cart
+          quantity: item.quantity || 1, // Assuming quantity field
+        }));
+        setCartItems(formattedCart);
+      } catch (error) {
+        console.error("Error fetching cart:", error);
+
+        if (error.response && error.response.status === 401) {
+          toast.error("Session expired! Please log in again.");
+          localStorage.removeItem("authToken"); // Clear token
+          navigate("/login"); // Redirect to login
+        } else {
+          toast.error("Error fetching cart!");
+        }
+
+        setCartItems([]); // Prevent undefined state
+      }
+    };
+
+    fetchCart();
+  }, [navigate]); // Include navigate in dependencies to avoid stale closure
+
+  const removeFromCart = async (productId) => {
+    try {
+      const authToken = localStorage.getItem("authToken"); // Retrieve token from local storage
+      const response = await API.delete("/user/cart/remove", {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+        data: { productId }, // Send productId as part of the request body
+      });
+  
+      console.log("Response status:", response.status); // Log response status
+  
+      if (response.status === 200) {
+        setCartItems((items) => items.filter((item) => item.id !== productId));
+        toast.success(`Product removed from cart`);
+      } else {
+        throw new Error("Unexpected response from server");
+      }
+    } catch (error) {
+      console.error("Error removing item:", error);
+      toast.error("Error removing item. Please try again.");
+    }
   };
+  
 
   const toggleLike = (id) => {
     setLikedItems((prev) => ({
@@ -61,14 +96,21 @@ const CartPage = () => {
     }));
   };
 
+  // const calculateTotal = () => {
+  //   return cartItems.reduce((total, item) => {
+  //     // Price after discount
+  //     const discountedPrice = (item.price * (100 - item.discount)) / 100;
+  //     // Multiply discounted price by quantity (tenure)
+  //     return total + discountedPrice * item.tenure;
+  //   }, 0);
+  // };
   const calculateTotal = () => {
     return cartItems.reduce((total, item) => {
-      // Price after discount
-      const discountedPrice = (item.price * (100 - item.discount)) / 100;
-      // Multiply discounted price by quantity (tenure)
-      return total + discountedPrice * item.tenure;
+      // Multiply selected price by the quantity (tenure or selectedMonth)
+      return total + (item.price * item.selectedMonth);
     }, 0);
   };
+  
 
   const handleCheckout = () => {
     setLoading(true);
@@ -133,28 +175,29 @@ const CartPage = () => {
                     </h3>
 
                     <div className="flex items-center space-x-2 mb-2">
-                      <span className="md:text-xl text-sm font-bold text-gray-900">
-                        ₹
-                        {((item.price * (100 - item.discount)) / 100).toFixed(
-                          2
-                        )}
-                      </span>
-                      {item.discount > 0 && (
-                        <>
-                          <span className="md:text-sm text-xs text-gray-500 line-through">
-                            ₹{item.price}
-                          </span>
-                          <span className="md:text-sm text-xs text-red-500 font-medium">
-                            {item.discount}% OFF
-                          </span>
-                        </>
+                      {item.price ? (
+                        // If selectedMonth and selectedPrice exist, show price for the selected month
+                        <div className="text-gray-900 text-sm">
+                          ₹<span className="font-bold">{item.price}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">
+                          Price not available
+                        </span>
                       )}
                     </div>
 
                     <div className="flex items-center space-x-2 md:text-sm text-xs">
-                      <span className="text-gray-600">
-                        Tenure: {item.tenure}
-                      </span>
+                      {item.price ? (
+                        <span className="text-gray-600">
+                          Tenure: {item.selectedMonth}{" "}
+                          {item.selectedMonth === 1 ? "month" : "months"}
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">
+                          Price not available
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -171,10 +214,11 @@ const CartPage = () => {
                       className="p-2 text-gray-400 hover:text-red-500 transition-colors duration-300"
                     >
                       <Heart
-                        className={`w-5 h-5 ${likedItems[item.id]
+                        className={`w-5 h-5 ${
+                          likedItems[item.id]
                             ? "fill-red-500 text-red-500"
                             : "text-gray-400"
-                          }`}
+                        }`}
                       />
                     </button>
                   </div>
@@ -204,13 +248,13 @@ const CartPage = () => {
                   {/* Price and Tenure for each product */}
                   <div className="space-y-1">
                     {cartItems.map((item) => {
-                      const itemTotal = (item.price * item.tenure).toFixed(2);
+                      const itemTotal = (item.price * item.selectedMonth).toFixed(2);
                       return (
                         <div key={item.id} className="flex justify-between">
                           <span className="text-gray-500">{item.title}</span>
                           <span className="font-semibold text-gray-500">
-                            ₹{itemTotal} ({item.tenure} month
-                            {item.tenure > 1 ? "s" : ""})
+                            ₹{itemTotal} ({item.selectedMonth} month
+                            {item.selectedMonth > 1 ? "s" : ""})
                           </span>
                         </div>
                       );
@@ -227,7 +271,7 @@ const CartPage = () => {
                       ₹
                       {cartItems
                         .reduce(
-                          (total, item) => total + item.price * item.tenure,
+                          (total, item) => total + item.price * item.selectedMonth,
                           0
                         )
                         .toFixed(2)}

@@ -23,6 +23,7 @@ const ProductPage = () => {
   const [benefit, setBenefit] = useState([]);
   const [mainImage, setMainImage] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isInCart, setIsInCart] = useState(false); // Track cart status
   const scrollRef = useRef(null);
   const [currentOfferIndex, setCurrentOfferIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -30,31 +31,36 @@ const ProductPage = () => {
   const [relatedProducts, setRelatedProducts] = useState([]); // State to store related products
   const [offerDetails, setofferDetails] = useState([]);
   const [rating, setRating] = useState(0);
-  const [selectedMonth, setSelectedMonth] = useState(3);
   const [priceOptions, setPriceOptions] = useState({}); // State to store dynamic price options
-  const [selectedPrice, setSelectedPrice] = useState(priceOptions[3]); // Default price for 3 months
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedPrice, setSelectedPrice] = useState(0); // Default price for 3 months
 
   useEffect(() => {
     const fetchProductById = async () => {
       try {
         const response = await API.get(`/product/products/${productId}`); // API call to fetch product
         console.log(response.data.product);
-        setProduct(response.data.product);
+        let productData = response.data.product;
+        console.log(productData);
+
+        // If inStock is false (or 0), add an "Out of Stock" message
+        if (!productData.inStock) {
+          productData.outOfStockMessage = "Product is now Out of Stock";
+        }
+
+        setProduct(productData);
 
         // Extracting benefit title
-        if (response.data.product.benefit) {
-          console.log("Benefit Title:", response.data.product.benefit.title);
-          console.log(
-            "Benefit Description:",
-            response.data.product.benefit.description
-          );
-          console.log("Benefits:", response.data.product.benefit);
-          const benefits = response.data.product.benefit;
+        if (productData.benefit) {
+          console.log("Benefit Title:", productData.benefit.title);
+          console.log("Benefit Description:", productData.benefit.description);
+          console.log("Benefits:", productData.benefit);
+          const benefits = productData.benefit;
           console.log(benefits);
           setBenefit(benefits); // Store it in state if needed
         }
         // Parse price options from the product's price field
-        const parsedPriceOptions = JSON.parse(response.data.product.price);
+        const parsedPriceOptions = JSON.parse(productData.price);
         console.log("PriceOptions", parsedPriceOptions);
 
         // Convert months string (like "6 months") to a number
@@ -118,6 +124,13 @@ const ProductPage = () => {
     fetchOfferDetails();
   }, []);
 
+  // Set the default selectedMonth and selectedPrice when the component mounts
+  useEffect(() => {
+    const defaultMonth = Object.keys(priceOptions)[0]; // Set the first month as default
+    setSelectedMonth(defaultMonth);
+    setSelectedPrice(priceOptions[defaultMonth]);
+  }, [priceOptions]);
+
   // if (!product) {
   //   return (
   //     <div className="text-center text-red-500 text-lg">Product Not Found</div>
@@ -159,9 +172,47 @@ const ProductPage = () => {
     try {
       await API.post("/user/wishlist", { productId: product.id });
       setIsWishlisted(true);
-      toast.success('Product added to Wishlist')
+      toast.success("Product added to Wishlist");
     } catch (error) {
-      console.error("Error adding to wishlist:", error);
+      console.error("Full error object:", error);
+
+      // Check if error is an object and has an 'error' key
+      if (error.error) {
+        toast.error(error.error);
+      } else if (error.message) {
+        toast.error(error.message);
+      } else {
+        toast.error("An unexpected error occurred.");
+      }
+    }
+  };
+
+  const handleAddToCart = async () => {
+    try {
+      // Get the token from localStorage (or sessionStorage)
+      const authToken = localStorage.getItem("authToken");
+
+      // Check if the token exists
+      if (!authToken) {
+        toast.error("You must be logged in to add products to the cart.");
+        return; // Exit the function if there's no token
+      }
+      // Send selectedPrice, selectedMonth, and productId to the backend to store in Cart
+      await API.post("/user/cart", {
+        productId: product.id,
+        selectedPrice: selectedPrice, // Send the selected price
+        selectedMonth: selectedMonth, // Send the selected month
+      });
+      setIsInCart(true); // Mark as added to the cart
+      toast.success("Product added to Cart"); // Show a success message
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      // Check if the error response includes a specific message
+      if (error.response && error.response.data && error.response.data.error) {
+        toast.error(error.response.data.error); // Show the specific error message from the API
+      } else {
+        toast.error("Failed to add product to Cart"); // Show a generic failure message
+      }
     }
   };
 
@@ -183,10 +234,11 @@ const ProductPage = () => {
     const interval = setInterval(handleNextSlide, 3000);
     return () => clearInterval(interval);
   }, [handleNextSlide]);
-  const handleMonthChange = (event) => {
-    const month = Number(event.target.value);
+
+  const handleMonthChange = (e) => {
+    const month = e.target.value;
     setSelectedMonth(month);
-    setSelectedPrice(priceOptions[month]); // Update price based on selected month
+    setSelectedPrice(priceOptions[month]); // Update selectedPrice when month changes
   };
 
   const copyToClipboard = async (code) => {
@@ -385,11 +437,11 @@ const ProductPage = () => {
 
                   {/* Price Selection */}
                   <select
-                    value={priceOptions[selectedMonth]}
+                    value={selectedPrice}
                     className="bg-gray-100 text-black font-medium text-md py-2 px-4 rounded-lg cursor-pointer appearance-none"
                     disabled
                   >
-                    <option>₹{priceOptions[selectedMonth]}</option>
+                    <option>₹{selectedPrice}</option>
                   </select>
                 </div>
               </div>
@@ -464,13 +516,33 @@ const ProductPage = () => {
             </div>
 
             <div className="flex space-x-4 pt-6">
-              <button className="flex-1 bg-red-800 text-white py-3 px-6 rounded-lg hover:bg-red-700 transition duration-300">
+              <button
+                disabled={!product?.inStock}
+                style={{ opacity: product?.inStock ? 1 : 0.5 }}
+                className="flex-1 bg-[#960b22] text-white py-3 px-6 rounded-lg hover:bg-red-700 transition duration-300"
+              >
                 Buy Now
               </button>
-              <button className="flex-1 border-2 border-red-800 text-red-800 py-3 px-6 rounded-lg hover:bg-red-50">
-                Add to Cart
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAddToCart(); // Call the function to add product to the cart
+                }}
+                className={`flex-1 border-2 py-3 px-6 rounded-lg ${
+                  isInCart
+                    ? "bg-[#960b22] text-white"
+                    : "border-[#960b22] text-[#960b22] hover:bg-red-50"
+                }`}
+              >
+                {isInCart ? "Added to Cart" : "Add to Cart"}{" "}
+                {/* Toggle the text */}
               </button>
             </div>
+            {product?.outOfStockMessage && (
+              <p style={{ color: "#960b22", fontWeight: "bold" }}>
+                {product.outOfStockMessage}
+              </p>
+            )}
           </div>
         </div>
 

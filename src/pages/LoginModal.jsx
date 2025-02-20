@@ -106,7 +106,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                     />
                     <label
                       htmlFor="name"
-                      className={`absolute left-0 top-4 text-gray-400 text-sm transition-all ${
+                      className={`w-full absolute left-0 top-4 text-gray-400 text-sm transition-all ${
                         name
                           ? "top-[-6px] text-xs text-gray-500 bg-white px-1"
                           : "top-4 text-base text-gray-400"
@@ -126,7 +126,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                     />
                     <label
                       htmlFor="phone"
-                      className={`absolute left-0 top-4 text-gray-400 text-sm transition-all ${
+                      className={`w-full absolute left-0 top-4 text-gray-400 text-sm transition-all ${
                         phone
                           ? "top-[-6px] text-xs text-gray-500 bg-white px-1"
                           : "top-4 text-base text-gray-400"
@@ -149,7 +149,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                 />
                 <label
                   htmlFor="email"
-                  className={`absolute left-0 top-2 text-gray-400 text-sm transition-all ${
+                  className={`w-full absolute left-0 top-2 text-gray-400 text-sm transition-all ${
                     email
                       ? "top-[-6px] text-xs text-gray-500 bg-white px-1"
                       : "top-4 text-base text-gray-400"
@@ -171,7 +171,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                 />
                 <label
                   htmlFor="password"
-                  className={`absolute left-0 top-4 text-gray-400 text-sm transition-all ${
+                  className={`w-full absolute left-0 top-4 text-gray-400 text-sm transition-all ${
                     password
                       ? "top-[-6px] text-xs text-gray-500 bg-white px-1"
                       : "top-4 text-base text-gray-400"

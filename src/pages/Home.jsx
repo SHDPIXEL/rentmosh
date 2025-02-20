@@ -43,7 +43,7 @@ const Home = () => {
 
         // Filter subcategories where the status is "Active"
         const subcategories = (response.data.subcategories || []).filter(
-          (sub) => sub.status === "Active"
+          (sub) => sub.status === "active"
         );
 
         // Format the data as required

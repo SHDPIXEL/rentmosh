@@ -22,8 +22,7 @@ import { FaMapMarkerAlt } from "react-icons/fa";
 import { AuthContext } from "../context/authContext";
 
 const Header = () => {
-  const { isAuthenticated, isTokenExpired, logout } =
-    useContext(AuthContext);
+  const { isAuthenticated, isTokenExpired, logout } = useContext(AuthContext);
   const [selectedCity, setSelectedCity] = useState("Mumbai");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -32,9 +31,10 @@ const Header = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [cityList, setCityList] = useState([]); // Fetch cities dynamically
   const [dropdownData, setDropdownData] = useState([]);
+  const [wishlistCount, setWishlistCount] = useState(0);
+  const [cartCount, setCartCount] = useState(0);
 
   const navigate = useNavigate();
-
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -53,8 +53,7 @@ const Header = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await API.get("/category/categories"); // Adjust the endpoint as needed
-        // const categories = response.data; // Ensure the response format is correct
+        const response = await API.get("/category/categories");
 
         const categories = response.data.filter(
           (category) => category.status === "Active"
@@ -66,10 +65,22 @@ const Header = () => {
             const subcategoryResponse = await API.get(
               `/subcategory/category/${category.id}`
             );
-            // Filter only active subcategories
+
+            // Log subcategories to check if the response is correct
+            console.log(
+              `Subcategories for category ${category.name}:`,
+              subcategoryResponse.data.subcategories
+            );
+
+            // Ensure subcategories is an array before proceeding
             const subcategories = (
-              subcategoryResponse.data.subcategories || []
-            ).filter((sub) => sub.status === "Active");
+              Array.isArray(subcategoryResponse.data.subcategories)
+                ? subcategoryResponse.data.subcategories
+                : []
+            ).filter((sub) => sub.status === "active");
+
+            // Log the filtered subcategories to verify the status filter
+            console.log("Filtered subcategories:", subcategories);
 
             return {
               label: category.name, // Category name as label
@@ -77,6 +88,9 @@ const Header = () => {
             };
           })
         );
+
+        // Log formatted data to check if it looks correct
+        console.log("Formatted dropdown data:", formattedData);
 
         setDropdownData(formattedData);
       } catch (error) {
@@ -86,6 +100,46 @@ const Header = () => {
     };
 
     fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    const fetchWishlistCount = async () => {
+      try {
+        const authToken = localStorage.getItem("authToken");
+        if (authToken) {
+          const response = await API.get("/user/wishlist", {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
+          setWishlistCount(response.data?.wishlistItems.length || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching wishlist count:", error);
+      }
+    };
+
+    fetchWishlistCount();
+  }, []);
+
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      try {
+        const authToken = localStorage.getItem("authToken");
+        if (authToken) {
+          const response = await API.get("/user/cart", {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
+          setCartCount(response.data?.cartItems.length || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching cart count:", error);
+      }
+    };
+
+    fetchCartCount();
   }, []);
 
   const handleCitySelect = (city) => {
@@ -155,13 +209,25 @@ const Header = () => {
         <div className="hidden lg:flex items-center space-x-4">
           <Link
             to="/wishlist"
-            className="hover:bg-gray-100 p-2 rounded-md"
-            
+            className="hover:bg-gray-100 p-2 rounded-md relative"
           >
             <Heart className="w-5 h-5 text-gray-700" />
+            {wishlistCount > 0 && (
+              <span className="absolute top-0 right-0 text-xs bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                {wishlistCount}
+              </span>
+            )}
           </Link>
-          <Link to="/cart" className="hover:bg-gray-100 p-2 rounded-md">
+          <Link
+            to="/cart"
+            className="hover:bg-gray-100 p-2 rounded-md relative"
+          >
             <ShoppingCart className="w-5 h-5 text-gray-700" />
+            {cartCount > 0 && (
+              <span className="absolute top-0 right-0 text-xs bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                {cartCount}
+              </span>
+            )}
           </Link>
           <div
             className="flex relative items-center gap-1 hover:bg-gray-100 rounded-md p-2 cursor-pointer"
